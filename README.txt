@@ -1,0 +1,1 @@
+These files are for the Scientific Programming in Python course. This is the README file.

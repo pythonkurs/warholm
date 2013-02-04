@@ -1,3 +1,3 @@
-from warholm import getting_data
+from warholm.session2 import getting_data
 
 getting_data()
