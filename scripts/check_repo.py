@@ -1,4 +1,5 @@
 import sys, os
+sys.path.append("..")
 from warholm.session3 import CourseRepo, ContextManager
 
 if len(sys.argv) != 2:
