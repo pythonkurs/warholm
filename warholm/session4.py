@@ -1,8 +1,7 @@
-import requests
+import requests, sys, json, getpass, datetime
 from dateutil import parser
-import datetime
 from pandas import Series, DataFrame
-import sys, json
+from collections import Counter
 
 def fetch_members(username, password):
 	users = requests.get("https://api.github.com/orgs/pythonkurs/members", auth=(username, password))
@@ -14,34 +13,44 @@ def fetch_repos(username, password):
 	repos_data = repos.json()
 	return repos_data
 
-base = datetime.datetime.now()
-date_list = [base - datetime.timedelta(days=x) for x in range(5)]
+## replacement for fetch_repos	
+def get_repos(): 
+	url = r'https://api.github.com/orgs/pythonkurs/repos'
+	username = raw_input('username:')	
+	password = getpass.getpass()
+	repos_response = requests.get(url, auth=(username, password))
+	repos = repos_response.json()
+	result = {}
+	for repo in repos:
+		repo_name =  repo['name']
+		url_commits =  repo['commits_url'].replace('{/sha}','')
+		commits = requests.get(url_commits,  auth=(username, password))
+		commits_data = commits.json()    
+		commits_messages=[]
+		commits_times=[]
+		for commit in commits_data:
+			if type(commit) == dict:
+				commits_times += [parser.parse(commit['commit']['author']['date'])]
+				# commits_times += [commit['commit']['author']['date']]
+				commits_messages += [commit['commit']['message']]
+		result[repo_name] = Series(commits_messages,index=commits_times)
+	df = DataFrame(result)
+	return df
+	
+def analyse(df):
+	dict_weekday = {0:"Monday",1:"Tuesday",2:"Wednesday",3:"Thursday",4:"Friday",5:"Saturday",6:"Sunday"}
+	dates = list(df.index)
+	weekdays = []
+	hours = []
 
-s = Series(["A commit message"] * 5, index=date_list, name="A repo")
-df = DataFrame(s)
+	for entry in dates:
+		weekdays.append(entry.weekday())
+		hours.append(entry.hour)
+		dict_week = Counter(week_day_list)
+		dict_hour = Counter(hour_list)
 
+	result = dict_weekday[week_dict.most_common(1)[0][0]] + 'is the most common day.' + str(dict_hour.most_common(1)[0][0]) +' is the most common hour.'
+	return result
 
-username = ''
-password = ''
-
-repos = fetch_repos(username,password)
-
-result = {}
-for repo in repos:
-    repo_name =  repo['name']
-    url_commits =  repo['commits_url'].replace('{/sha}','')
-    commits = requests.get(url_commits,  auth=(username, password))
-    commits_data = commits.json()
-    
-    commits_messages=[]
-    commits_times=[]
-    for commit in commits_data:
-        if type(commit) == dict:
-            commits_times += [commit['commit']['author']['date']]
-            commits_messages += [commit['commit']['message']]
-
-        result[repo_name] = Series(commits_messages,index=commits_times)
-df = DataFrame(result)
-
-
-print df
+df = get_repos()
+print analyse(df)
